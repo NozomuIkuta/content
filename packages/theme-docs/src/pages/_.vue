@@ -37,21 +37,24 @@ import AppCopyButton from '~/components/app/AppCopyButton'
 
 export default {
   name: 'PageSlug',
-  layout ({ store }) {
-    return store.state.settings.layout || 'default'
+  layout ({ store, document }) {
+    return document.layout || store.state.settings.layout || 'default'
   },
-  middleware ({ app, params, redirect }) {
-    if (params.pathMatch === 'index') {
-      redirect(app.localePath('/'))
-    }
-  },
-  async asyncData ({ $content, store, app, params, error }) {
+  async middleware (context) {
+    const { app, params, redirect, $content } = context
     const path = `/${app.i18n.locale}/${params.pathMatch || 'index'}`
     const [document] = await $content({ deep: true }).where({ path }).fetch()
     if (!document) {
       return error({ statusCode: 404, message: 'Page not found' })
     }
 
+    context.document = document
+
+    if (params.pathMatch === 'index') {
+      redirect(app.localePath('/'))
+    }
+  },
+  async asyncData ({ $content, document, app }) {
     const [prev, next] = await $content(app.i18n.locale, { deep: true })
       .only(['title', 'slug', 'to'])
       .sortBy('position', 'asc')
